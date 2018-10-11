@@ -1,9 +1,9 @@
 {
-    "name": "qiwoo-article-linker",
-    "displayName": "WordCount",
-    "description": "WordCount",
+    "name": "Linksup",
+    "displayName": "Linksup",
+    "description": "Linksup",
     "version": "0.0.1",
-    "publisher": "WordCount",
+    "publisher": "Linksup",
     "engines": {
         "vscode": "^1.28.0"
     },
@@ -11,8 +11,7 @@
         "Other"
     ],
     "contributes": {
-        "commands": [
-            {
+        "commands": [{
                 "command": "extension.lnk2sup",
                 "title": "链接转角标",
                 "category": "Transform"
