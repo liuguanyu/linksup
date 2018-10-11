@@ -78,7 +78,7 @@ const changeLnks2Sups = (baseData) => {
     let mdText = baseData.mdText;
     let sups = baseData.sups;
     let lnks = baseData.lnks;
-    console.log(sups, lnks);
+    console.log(mdText, sups, lnks);
 };
 const getBaseData = () => {
     let doc = getDoc();
