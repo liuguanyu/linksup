@@ -11,7 +11,8 @@
         "Other"
     ],
     "contributes": {
-        "commands": [{
+        "commands": [
+            {
                 "command": "extension.lnk2sup",
                 "title": "链接转角标",
                 "category": "Transform"
