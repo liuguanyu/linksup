@@ -4,6 +4,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // Import the module and reference it with the alias vscode in your code below
 const vscode = require("vscode");
 const LINK_MD_SECTION = '文内链接';
+function searchIdxFromMarkdownByLnks(lnk, md) {
+    return md.indexOf(lnk.markdown);
+}
+function searchIdxFromMarkdownBySups(sup, md) {
+    return md.indexOf(sup.html);
+}
 const getDoc = () => {
     let editor = vscode.window.activeTextEditor;
     if (editor === undefined) {
@@ -21,6 +27,7 @@ const getLnksFromMd = (md) => {
             idx: idx++,
             text: res[1],
             link: res[2],
+            markdown: res[0],
         });
     }
     return rets;
@@ -74,11 +81,105 @@ const getSupsFromMd = (md) => {
         });
     });
 };
+// 更新sup在前文的<sup>标签
+const inHereReplaceSupString = (mdText, idxS, node, newSups) => {
+    let prev = mdText.slice(0, idxS);
+    let newSupText = `${node.text} <sup>${newSups.length + 1}</sup>`;
+    let tail = mdText.slice(idxS).slice(node.html.length);
+    return [prev, newSupText, tail].join('');
+};
+// 更新link在前文的markdown标签
+const inHereReplaceLnkString = (mdText, idxL, node, newSups) => {
+    let prev = mdText.slice(0, idxL);
+    let newSupText = `${node.text}<sup>${newSups.length + 1}</sup>`;
+    let tail = mdText.slice(idxL).slice(node.markdown.length);
+    return [prev, newSupText, tail].join('');
+};
+const updateSupSection = (mdText, newSups) => {
+    let regSup = new RegExp('#.*?' + LINK_MD_SECTION + '([\\s|\\S]*)?\\n#.*', 'm');
+    if (mdText.match(regSup)) {
+        // 现在有这个节
+        return '';
+    }
+    else {
+        // 直接追加
+        // 先确定此节的层级：找第一个层级，然后加在最后
+        let matches = mdText.match(/^(#+)(.*)/);
+        let level = 1;
+        if (matches !== null && matches[0] !== null) {
+            let text = matches[0].match(/^(#+)/);
+            if (text !== null && text[1] !== null) {
+                level = text[1].length;
+            }
+        }
+        mdText =
+            mdText +
+                '\n' +
+                Array(level)
+                    .fill('#')
+                    .join('') +
+                LINK_MD_SECTION +
+                '\n';
+        return (newSups.reduce((prev, curr) => {
+            return prev + '\n' + '1.' + ' ' + curr.link + ' <!--' + curr.text + '-->';
+        }, mdText) + '\n');
+    }
+};
 const changeLnks2Sups = (baseData) => {
     let mdText = baseData.mdText;
     let sups = baseData.sups;
     let lnks = baseData.lnks;
-    console.log(mdText, sups, lnks);
+    let newSups = [];
+    let i = 0, j = 0, idxS, idxL, nodeS, nodeL;
+    let configLnks = (idxL, nodeL) => {
+        mdText = inHereReplaceLnkString(mdText, idxL, nodeL, newSups);
+        newSups = newSups.concat([
+            {
+                idx: newSups.length,
+                link: nodeL.link,
+                html: `${nodeL.text} <sup>${newSups.length + 1}</sup>`,
+                text: nodeL.text,
+            },
+        ]);
+    };
+    let configSups = (idxS, nodeS) => {
+        mdText = inHereReplaceSupString(mdText, idxS, nodeS, newSups);
+        newSups = newSups.concat([
+            {
+                idx: newSups.length,
+                link: nodeS.link,
+                html: `<sup>${newSups.length + 1}</sup>`,
+                text: nodeS.text,
+            },
+        ]);
+    };
+    while (i < sups.length || j < lnks.length) {
+        nodeS = sups[i];
+        nodeL = lnks[j];
+        idxS = nodeS === undefined ? -1 : searchIdxFromMarkdownBySups(nodeS, mdText);
+        idxL = nodeL === undefined ? -1 : searchIdxFromMarkdownByLnks(nodeL, mdText);
+        if (nodeS === undefined && nodeL !== undefined) {
+            configLnks(idxL, nodeL);
+            j++;
+            continue;
+        }
+        if (nodeL === undefined && nodeS !== undefined) {
+            configSups(idxS, nodeS);
+            i++;
+            continue;
+        }
+        if (idxS < idxL) {
+            configSups(idxS, nodeS);
+            i++;
+            continue;
+        }
+        else {
+            configLnks(idxL, nodeL);
+            j++;
+            continue;
+        }
+    }
+    return updateSupSection(mdText, newSups);
 };
 const getBaseData = () => {
     let doc = getDoc();
@@ -119,7 +220,8 @@ function activate(context) {
     // The commandId parameter must match the command field in package.json
     let disposableLnk2sup = vscode.commands.registerCommand('extension.lnk2sup', () => {
         // The code you place here will be executed every time your command is executed
-        lnk2sup();
+        let newText = lnk2sup();
+        console.log(newText);
     });
     let disposableSup2Lnk = vscode.commands.registerCommand('extension.sup2lnk', () => {
         // The code you place here will be executed every time your command is executed

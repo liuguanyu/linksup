@@ -9,6 +9,7 @@ interface LNK {
 	idx: Number;
 	text: string;
 	link: string;
+	markdown: string;
 }
 
 interface SUP {
@@ -20,8 +21,16 @@ interface SUP {
 
 interface BaseData {
 	mdText: string;
-	lnks: Array<LNK>;
-	sups: Array<SUP>;
+	lnks: LNK[];
+	sups: SUP[];
+}
+
+function searchIdxFromMarkdownByLnks(lnk: LNK, md: string): number {
+	return md.indexOf(lnk.markdown);
+}
+
+function searchIdxFromMarkdownBySups(sup: SUP, md: string): number {
+	return md.indexOf(sup.html);
 }
 
 const getDoc = () => {
@@ -34,7 +43,7 @@ const getDoc = () => {
 	return editor.document;
 };
 
-const getLnksFromMd = (md: string): Array<LNK> => {
+const getLnksFromMd = (md: string): LNK[] => {
 	let reg = /\[([^\[]+)\]\(([^\)]+)\)/g;
 	let res;
 	let idx = 0;
@@ -45,13 +54,14 @@ const getLnksFromMd = (md: string): Array<LNK> => {
 			idx: idx++,
 			text: res[1],
 			link: res[2],
+			markdown: res[0],
 		});
 	}
 
 	return rets;
 };
 
-const getSupsFromMd = (md: string): Array<SUP> => {
+const getSupsFromMd = (md: string): SUP[] => {
 	let reg = /\<sup\>(\d+)?\<\/sup\>/g;
 	let res;
 	let tags = [];
@@ -108,12 +118,130 @@ const getSupsFromMd = (md: string): Array<SUP> => {
 	});
 };
 
-const changeLnks2Sups = (baseData: BaseData) => {
+// 更新sup在前文的<sup>标签
+const inHereReplaceSupString = (mdText: string, idxS: number, node: SUP, newSups: SUP[]): string => {
+	let prev = mdText.slice(0, idxS);
+	let newSupText = `${node.text} <sup>${newSups.length + 1}</sup>`;
+	let tail = mdText.slice(idxS).slice(node.html.length);
+
+	return [prev, newSupText, tail].join('');
+};
+
+// 更新link在前文的markdown标签
+const inHereReplaceLnkString = (mdText: string, idxL: number, node: LNK, newSups: SUP[]): string => {
+	let prev = mdText.slice(0, idxL);
+	let newSupText = `${node.text}<sup>${newSups.length + 1}</sup>`;
+	let tail = mdText.slice(idxL).slice(node.markdown.length);
+
+	return [prev, newSupText, tail].join('');
+};
+
+const updateSupSection = (mdText: string, newSups: SUP[]): string => {
+	let regSup = new RegExp('#.*?' + LINK_MD_SECTION + '([\\s|\\S]*)?\\n#.*', 'm');
+
+	if (mdText.match(regSup)) {
+		// 现在有这个节
+
+		return '';
+	} else {
+		// 直接追加
+		// 先确定此节的层级：找第一个层级，然后加在最后
+		let matches = mdText.match(/^(#+)(.*)/);
+		let level = 1;
+		if (matches !== null && matches[0] !== null) {
+			let text = matches[0].match(/^(#+)/);
+
+			if (text !== null && text[1] !== null) {
+				level = text[1].length;
+			}
+		}
+
+		mdText =
+			mdText +
+			'\n' +
+			Array(level)
+				.fill('#')
+				.join('') +
+			LINK_MD_SECTION +
+			'\n';
+
+		return (
+			newSups.reduce((prev: string, curr: SUP) => {
+				return prev + '\n' + '1.' + ' ' + curr.link + ' <!--' + curr.text + '-->';
+			}, mdText) + '\n'
+		);
+	}
+};
+
+const changeLnks2Sups = (baseData: BaseData): string => {
 	let mdText = baseData.mdText;
 	let sups = baseData.sups;
 	let lnks = baseData.lnks;
 
-	console.log(mdText, sups, lnks);
+	let newSups: SUP[] = [];
+
+	let i = 0,
+		j = 0,
+		idxS: number,
+		idxL: number,
+		nodeS: SUP,
+		nodeL: LNK;
+
+	let configLnks = (idxL: number, nodeL: LNK) => {
+		mdText = inHereReplaceLnkString(mdText, idxL, nodeL, newSups);
+		newSups = newSups.concat([
+			{
+				idx: newSups.length,
+				link: nodeL.link,
+				html: `${nodeL.text} <sup>${newSups.length + 1}</sup>`,
+				text: nodeL.text,
+			},
+		]);
+	};
+
+	let configSups = (idxS: number, nodeS: SUP) => {
+		mdText = inHereReplaceSupString(mdText, idxS, nodeS, newSups);
+		newSups = newSups.concat([
+			{
+				idx: newSups.length,
+				link: nodeS.link,
+				html: `<sup>${newSups.length + 1}</sup>`,
+				text: nodeS.text,
+			},
+		]);
+	};
+
+	while (i < sups.length || j < lnks.length) {
+		nodeS = sups[i];
+		nodeL = lnks[j];
+
+		idxS = nodeS === undefined ? -1 : searchIdxFromMarkdownBySups(nodeS, mdText);
+		idxL = nodeL === undefined ? -1 : searchIdxFromMarkdownByLnks(nodeL, mdText);
+
+		if (nodeS === undefined && nodeL !== undefined) {
+			configLnks(idxL, nodeL);
+			j++;
+			continue;
+		}
+
+		if (nodeL === undefined && nodeS !== undefined) {
+			configSups(idxS, nodeS);
+			i++;
+			continue;
+		}
+
+		if (idxS < idxL) {
+			configSups(idxS, nodeS);
+			i++;
+			continue;
+		} else {
+			configLnks(idxL, nodeL);
+			j++;
+			continue;
+		}
+	}
+
+	return updateSupSection(mdText, newSups);
 };
 
 const getBaseData = (): BaseData | undefined => {
@@ -167,7 +295,8 @@ export function activate(context: vscode.ExtensionContext) {
 	let disposableLnk2sup = vscode.commands.registerCommand('extension.lnk2sup', () => {
 		// The code you place here will be executed every time your command is executed
 
-		lnk2sup();
+		let newText = lnk2sup();
+		console.log(newText);
 	});
 
 	let disposableSup2Lnk = vscode.commands.registerCommand('extension.sup2lnk', () => {
