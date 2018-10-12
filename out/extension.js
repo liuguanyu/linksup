@@ -36,7 +36,7 @@ const getLnksFromMd = (md) => {
     return rets;
 };
 const getSupsFromMd = (md) => {
-    let reg = /\<sup\>(\d+)?\<\/sup\>/g;
+    let reg = /(<!--begin sup text-->(.*)?<!--end sup text-->){0, 1}\<sup\>(\d+)?\<\/sup\>/g;
     let res;
     let tags = [];
     let rets = [];
@@ -87,14 +87,14 @@ const getSupsFromMd = (md) => {
 // 更新sup在前文的<sup>标签
 const inHereReplaceSupString = (mdText, idxS, node, newSups) => {
     let prev = mdText.slice(0, idxS);
-    let newSupText = `${node.text} <sup>${newSups.length + 1}</sup>`;
+    let newSupText = `<!--begin sup text-->${node.text} <!--end sup text--><sup>${newSups.length + 1}</sup>`;
     let tail = mdText.slice(idxS).slice(node.html.length);
     return [prev, newSupText, tail].join('');
 };
 // 更新link在前文的markdown标签
 const inHereReplaceLnkString = (mdText, idxL, node, newSups) => {
     let prev = mdText.slice(0, idxL);
-    let newSupText = `${node.text}<sup>${newSups.length + 1}</sup>`;
+    let newSupText = `<!--begin sup text-->${node.text}<!--end sup text--><sup>${newSups.length + 1}</sup>`;
     let tail = mdText.slice(idxL).slice(node.markdown.length);
     return [prev, newSupText, tail].join('');
 };
