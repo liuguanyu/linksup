@@ -18,11 +18,14 @@ const getDoc = () => {
     return editor.document;
 };
 const getLnksFromMd = (md) => {
-    let reg = /\[([^\[]+)\]\(([^\)]+)\)/g;
+    let reg = /!{0,1}\[([^\[]+)\]\(([^\)]+)\)/g;
     let res;
     let idx = 0;
     let rets = [];
     while ((res = reg.exec(md)) !== null) {
+        if (res[0][0] === '!') {
+            continue;
+        }
         rets.push({
             idx: idx++,
             text: res[1],
