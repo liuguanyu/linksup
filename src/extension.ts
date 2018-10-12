@@ -65,7 +65,7 @@ const getLnksFromMd = (md: string): LNK[] => {
 };
 
 const getSupsFromMd = (md: string): SUP[] => {
-	let reg = /(<!--begin sup text-->(.*)?<!--end sup text-->){0, 1}\<sup\>(\d+)?\<\/sup\>/g;
+	let reg = /(<!--begin sup text-->(.*)?<!--end sup text-->){.*}\<sup\>(\d+)?\<\/sup\>/g;
 	let res;
 	let tags = [];
 	let rets: SUP[] = [];
@@ -75,7 +75,8 @@ const getSupsFromMd = (md: string): SUP[] => {
 		tags.push(1);
 	}
 
-	let regSup = new RegExp('#.*?' + LINK_MD_SECTION + '([\\s|\\S]*)?\\n#.*', 'm');
+	// let regSup = new RegExp('#.*?' + LINK_MD_SECTION + '([\\s|\\S]*)?\\n#.*', 'm');
+	let regSup = new RegExp('#.*?' + LINK_MD_SECTION + '[\\s|.]{0,}((\\d+.[s|S]+?)\\n)*', 'm');
 	let links = md.match(regSup);
 
 	if (links === null || links[1] === undefined) {
@@ -140,12 +141,26 @@ const inHereReplaceLnkString = (mdText: string, idxL: number, node: LNK, newSups
 };
 
 const updateSupSection = (mdText: string, newSups: SUP[]): string => {
-	let regSup = new RegExp('#.*?' + LINK_MD_SECTION + '([\\s|\\S]*)?\\n#.*', 'm');
+	let regSup = new RegExp('#.*?' + LINK_MD_SECTION);
 
 	if (mdText.match(regSup)) {
 		// 现在有这个节
+		let regSup2 = new RegExp('#.*?' + LINK_MD_SECTION + '[\\s|.]{0,}((\\d+.[\\s|\\S]+?)\\n)*', 'm');
 
-		return '';
+		mdText = mdText.replace(
+			regSup2,
+			(text): string => {
+				return (
+					text.split('\n')[0] +
+					'\n' +
+					newSups.reduce((prev: string, curr: SUP) => {
+						return prev + '\n' + '1.' + ' ' + curr.link + ' <!--' + curr.text + '-->';
+					}, '') +
+					'\n'
+				);
+			}
+		);
+		return mdText;
 	} else {
 		// 直接追加
 		// 先确定此节的层级：找第一个层级，然后加在最后
@@ -292,7 +307,6 @@ const sup2lnk = () => {
 export function activate(context: vscode.ExtensionContext) {
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
-	// console.log('Congratulations, your extension "wechat" is now active!');
 
 	// The command has been defined in the package.json file
 	// Now provide the implementation of the command with  registerCommand

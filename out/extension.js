@@ -36,7 +36,7 @@ const getLnksFromMd = (md) => {
     return rets;
 };
 const getSupsFromMd = (md) => {
-    let reg = /(<!--begin sup text-->(.*)?<!--end sup text-->){0, 1}\<sup\>(\d+)?\<\/sup\>/g;
+    let reg = /(<!--begin sup text-->(.*)?<!--end sup text-->){.*}\<sup\>(\d+)?\<\/sup\>/g;
     let res;
     let tags = [];
     let rets = [];
@@ -44,7 +44,8 @@ const getSupsFromMd = (md) => {
     while ((res = reg.exec(md)) !== null) {
         tags.push(1);
     }
-    let regSup = new RegExp('#.*?' + LINK_MD_SECTION + '([\\s|\\S]*)?\\n#.*', 'm');
+    // let regSup = new RegExp('#.*?' + LINK_MD_SECTION + '([\\s|\\S]*)?\\n#.*', 'm');
+    let regSup = new RegExp('#.*?' + LINK_MD_SECTION + '[\\s|.]{0,}((\\d+.[s|S]+?)\\n)*', 'm');
     let links = md.match(regSup);
     if (links === null || links[1] === undefined) {
         if (tags.length === 0) {
@@ -99,10 +100,19 @@ const inHereReplaceLnkString = (mdText, idxL, node, newSups) => {
     return [prev, newSupText, tail].join('');
 };
 const updateSupSection = (mdText, newSups) => {
-    let regSup = new RegExp('#.*?' + LINK_MD_SECTION + '([\\s|\\S]*)?\\n#.*', 'm');
+    let regSup = new RegExp('#.*?' + LINK_MD_SECTION);
     if (mdText.match(regSup)) {
         // 现在有这个节
-        return '';
+        let regSup2 = new RegExp('#.*?' + LINK_MD_SECTION + '[\\s|.]{0,}((\\d+.[\\s|\\S]+?)\\n)*', 'm');
+        mdText = mdText.replace(regSup2, (text) => {
+            return (text.split('\n')[0] +
+                '\n' +
+                newSups.reduce((prev, curr) => {
+                    return prev + '\n' + '1.' + ' ' + curr.link + ' <!--' + curr.text + '-->';
+                }, '') +
+                '\n');
+        });
+        return mdText;
     }
     else {
         // 直接追加
@@ -219,7 +229,6 @@ const sup2lnk = () => {
 function activate(context) {
     // Use the console to output diagnostic information (console.log) and errors (console.error)
     // This line of code will only be executed once when your extension is activated
-    // console.log('Congratulations, your extension "wechat" is now active!');
     // The command has been defined in the package.json file
     // Now provide the implementation of the command with  registerCommand
     // The commandId parameter must match the command field in package.json
