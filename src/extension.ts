@@ -162,6 +162,7 @@ const updateSupSection = (mdText: string, newSups: SUP[]): string => {
 			Array(level)
 				.fill('#')
 				.join('') +
+			' ' +
 			LINK_MD_SECTION +
 			'\n';
 
@@ -270,7 +271,8 @@ const lnk2sup = () => {
 	let baseData = getBaseData();
 
 	if (baseData !== undefined) {
-		changeLnks2Sups(baseData);
+		let newText = changeLnks2Sups(baseData);
+		console.log(newText);
 	}
 };
 
@@ -295,8 +297,7 @@ export function activate(context: vscode.ExtensionContext) {
 	let disposableLnk2sup = vscode.commands.registerCommand('extension.lnk2sup', () => {
 		// The code you place here will be executed every time your command is executed
 
-		let newText = lnk2sup();
-		console.log(newText);
+		lnk2sup();
 	});
 
 	let disposableSup2Lnk = vscode.commands.registerCommand('extension.sup2lnk', () => {
