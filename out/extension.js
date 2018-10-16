@@ -36,7 +36,7 @@ const getLnksFromMd = (md) => {
     return rets;
 };
 const getSupsFromMd = (md) => {
-    let reg = /(<!--begin sup text-->(.*)?<!--end sup text-->){.*}\<sup\>(\d+)?\<\/sup\>/g;
+    let reg = /(<!--begin sup text-->(.*)?<!--end sup text-->){0,1}<sup>(\d+)?<\/sup>/g;
     let res;
     let tags = [];
     let rets = [];
@@ -45,9 +45,10 @@ const getSupsFromMd = (md) => {
         tags.push(1);
     }
     // let regSup = new RegExp('#.*?' + LINK_MD_SECTION + '([\\s|\\S]*)?\\n#.*', 'm');
-    let regSup = new RegExp('#.*?' + LINK_MD_SECTION + '[\\s|.]{0,}((\\d+.[s|S]+?)\\n)*', 'm');
+    // 找到文末的“文内链接”段
+    let regSup = new RegExp('#.*?' + LINK_MD_SECTION + '.*\\n+?((?:^|\\n)\\d+.\\s{0,}.*\\n)*', 'm');
     let links = md.match(regSup);
-    if (links === null || links[1] === undefined) {
+    if (links === null || links[0] === undefined) {
         if (tags.length === 0) {
             return rets;
         }
@@ -56,7 +57,8 @@ const getSupsFromMd = (md) => {
         }
     }
     // 摘取目前在LINK_MD_SECTION里面的链接
-    let linkList = links[1]
+    let linkText = links[0].replace(new RegExp('#.*?' + LINK_MD_SECTION), '').trim();
+    let linkList = linkText
         .trim()
         .split('\n')
         .map(el => {
@@ -65,15 +67,9 @@ const getSupsFromMd = (md) => {
             .replace(/\d*?\.\s*/, '')
             .split(/\s+?/);
         if (node.length > 1) {
-            return {
-                link: node[0],
-                text: node[1].replace(/<!--\s*?(.*)?\s*?-->/, '$1').trim(),
-            };
+            return { link: node[0], text: node[1].replace(/<!--\s*?(.*)?\s*?-->/, '$1').trim() };
         }
-        return {
-            link: node[0],
-            text: node[0],
-        };
+        return { link: node[0], text: node[0] };
     });
     if (tags.length !== linkList.length) {
         throw new Error('Unmatched markdown link!');
@@ -81,23 +77,37 @@ const getSupsFromMd = (md) => {
     return linkList.map((el, i) => {
         return Object.assign(el, {
             idx: i,
-            html: `<sup>${i + 1}</sup>`,
+            html: `<!--begin sup text-->${el.text}<!--end sup text--><sup>${i + 1}</sup>`,
         });
     });
 };
 // 更新sup在前文的<sup>标签
-const inHereReplaceSupString = (mdText, idxS, node, newSups) => {
+const inHereReplaceSupString2Sup = (mdText, idxS, node, newSups) => {
     let prev = mdText.slice(0, idxS);
     let newSupText = `<!--begin sup text-->${node.text} <!--end sup text--><sup>${newSups.length + 1}</sup>`;
     let tail = mdText.slice(idxS).slice(node.html.length);
     return [prev, newSupText, tail].join('');
 };
 // 更新link在前文的markdown标签
-const inHereReplaceLnkString = (mdText, idxL, node, newSups) => {
+const inHereReplaceLnkString2Sup = (mdText, idxL, node, newSups) => {
     let prev = mdText.slice(0, idxL);
     let newSupText = `<!--begin sup text-->${node.text}<!--end sup text--><sup>${newSups.length + 1}</sup>`;
     let tail = mdText.slice(idxL).slice(node.markdown.length);
     return [prev, newSupText, tail].join('');
+};
+// 更新sup在前文的<sup>标签为markdown格式
+const inHereReplaceSupString2Lnk = (mdText, idxS, node, newLnks) => {
+    let prev = mdText.slice(0, idxS);
+    let newLnkText = `[${node.text}](${node.link})`;
+    let tail = mdText.slice(idxS).slice(node.html.length);
+    return [prev, newLnkText, tail].join('');
+};
+// 更新lnk在前文的markdown
+const inHereReplaceLnkString2Lnk = (mdText, idxL, nodeL, newLnks) => {
+    let prev = mdText.slice(0, idxL);
+    let newLnkText = `[${nodeL.text}](${nodeL.link})`;
+    let tail = mdText.slice(idxL).slice(nodeL.markdown.length);
+    return [prev, newLnkText, tail].join('');
 };
 const updateSupSection = (mdText, newSups) => {
     let regSup = new RegExp('#.*?' + LINK_MD_SECTION);
@@ -139,6 +149,10 @@ const updateSupSection = (mdText, newSups) => {
         }, mdText) + '\n');
     }
 };
+const cleanSupSection = (mdText) => {
+    let regSup = new RegExp('#.*?' + LINK_MD_SECTION + '.*\\n+?((?:^|\\n)\\d+.\\s{0,}.*\\n)*?', 'm');
+    return mdText; //mdText.replace(regSup, '');
+};
 const changeLnks2Sups = (baseData) => {
     let mdText = baseData.mdText;
     let sups = baseData.sups;
@@ -146,7 +160,7 @@ const changeLnks2Sups = (baseData) => {
     let newSups = [];
     let i = 0, j = 0, idxS, idxL, nodeS, nodeL;
     let configLnks = (idxL, nodeL) => {
-        mdText = inHereReplaceLnkString(mdText, idxL, nodeL, newSups);
+        mdText = inHereReplaceLnkString2Sup(mdText, idxL, nodeL, newSups);
         newSups = newSups.concat([
             {
                 idx: newSups.length,
@@ -157,7 +171,7 @@ const changeLnks2Sups = (baseData) => {
         ]);
     };
     let configSups = (idxS, nodeS) => {
-        mdText = inHereReplaceSupString(mdText, idxS, nodeS, newSups);
+        mdText = inHereReplaceSupString2Sup(mdText, idxS, nodeS, newSups);
         newSups = newSups.concat([
             {
                 idx: newSups.length,
@@ -195,6 +209,62 @@ const changeLnks2Sups = (baseData) => {
     }
     return updateSupSection(mdText, newSups);
 };
+const changeSups2Lnk = (baseData) => {
+    let mdText = baseData.mdText;
+    let sups = baseData.sups;
+    let lnks = baseData.lnks;
+    let newLnks = [];
+    let i = 0, j = 0, idxS, idxL, nodeS, nodeL;
+    let configLnks = (idxL, nodeL) => {
+        mdText = inHereReplaceLnkString2Lnk(mdText, idxL, nodeL, newLnks);
+        newLnks = newLnks.concat([
+            {
+                idx: newLnks.length,
+                link: nodeL.link,
+                markdown: `[${nodeL.text}](${nodeL.link})`,
+                text: nodeL.text,
+            },
+        ]);
+    };
+    let configSups = (idxS, nodeS) => {
+        mdText = inHereReplaceSupString2Lnk(mdText, idxS, nodeS, newLnks);
+        newLnks = newLnks.concat([
+            {
+                idx: newLnks.length,
+                link: nodeS.link,
+                markdown: `[${nodeS.text}](${nodeS.link})`,
+                text: nodeS.text,
+            },
+        ]);
+    };
+    while (i < sups.length || j < lnks.length) {
+        nodeS = sups[i];
+        nodeL = lnks[j];
+        idxS = nodeS === undefined ? -1 : searchIdxFromMarkdownBySups(nodeS, mdText);
+        idxL = nodeL === undefined ? -1 : searchIdxFromMarkdownByLnks(nodeL, mdText);
+        if (nodeS === undefined && nodeL !== undefined) {
+            configLnks(idxL, nodeL);
+            j++;
+            continue;
+        }
+        if (nodeL === undefined && nodeS !== undefined) {
+            configSups(idxS, nodeS);
+            i++;
+            continue;
+        }
+        if (idxS < idxL) {
+            configSups(idxS, nodeS);
+            i++;
+            continue;
+        }
+        else {
+            configLnks(idxL, nodeL);
+            j++;
+            continue;
+        }
+    }
+    return cleanSupSection(mdText);
+};
 const getBaseData = () => {
     let doc = getDoc();
     if (doc === undefined) {
@@ -221,7 +291,8 @@ const lnk2sup = () => {
 const sup2lnk = () => {
     let baseData = getBaseData();
     if (baseData !== undefined) {
-        changeLnks2Sups(baseData);
+        let newText = changeSups2Lnk(baseData);
+        console.log(newText);
     }
 };
 // this method is called when your extension is activated
