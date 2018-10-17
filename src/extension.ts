@@ -4,6 +4,8 @@
 import * as vscode from 'vscode';
 
 const LINK_MD_SECTION = '文内链接';
+const LNK_TO_SUP_OK = '已经将所有链接变为角标形式';
+const SUP_TO_LNK_OK = '已经将所有角标变为链接形式';
 
 interface LNK {
 	idx: number;
@@ -435,18 +437,19 @@ export function activate(context: vscode.ExtensionContext) {
 		// The code you place here will be executed every time your command is executed
 
 		lnk2sup();
+		vscode.window.showInformationMessage(LNK_TO_SUP_OK);
 	});
 
 	let disposableSup2Lnk = vscode.commands.registerCommand('extension.sup2lnk', () => {
 		// The code you place here will be executed every time your command is executed
 		sup2lnk();
+		vscode.window.showInformationMessage(SUP_TO_LNK_OK);
 	});
 
 	context.subscriptions.push(disposableLnk2sup);
 	context.subscriptions.push(disposableSup2Lnk);
 
 	// Display a message box to the user
-	vscode.window.showInformationMessage('Success!');
 }
 
 // this method is called when your extension is deactivated

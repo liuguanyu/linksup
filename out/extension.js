@@ -1,18 +1,14 @@
 'use strict';
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
+Object.defineProperty(exports, "__esModule", { value: true });
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 const vscode = require("vscode");
 const LINK_MD_SECTION = '文内链接';
-const LNK2SUP_OK = '已经将所有的链接转为角标形式';
-const SUP2LNK_OK = '已经将所有的角标转为链接形式';
-
+const LNK_TO_SUP_OK = '已经将所有链接变为角标形式';
+const SUP_TO_LNK_OK = '已经将所有角标变为链接形式';
 function searchIdxFromMarkdownByLnks(lnk, md) {
     return md.indexOf(lnk.markdown);
 }
-
 function searchIdxFromMarkdownBySups(sup, md) {
     return md.search(sup.search);
 }
@@ -57,7 +53,8 @@ const getSupsFromMd = (md) => {
     if (links === null || links[0] === undefined) {
         if (tags.length === 0) {
             return rets;
-        } else {
+        }
+        else {
             throw new Error('Unmatched markdown link!');
         }
     }
@@ -67,21 +64,15 @@ const getSupsFromMd = (md) => {
         .trim()
         .split('\n')
         .map(el => {
-            let node = el
-                .trim()
-                .replace(/\d*?\.\s*/, '')
-                .split(/\s+?/);
-            if (node.length > 1) {
-                return {
-                    link: node[0],
-                    text: node[1].replace(/<!--\s*?(.*)?\s*?-->/, '$1').trim()
-                };
-            }
-            return {
-                link: node[0],
-                text: node[0]
-            };
-        });
+        let node = el
+            .trim()
+            .replace(/\d*?\.\s*/, '')
+            .split(/\s+?/);
+        if (node.length > 1) {
+            return { link: node[0], text: node[1].replace(/<!--\s*?(.*)?\s*?-->/, '$1').trim() };
+        }
+        return { link: node[0], text: node[0] };
+    });
     if (tags.length !== linkList.length) {
         throw new Error('Unmatched markdown link!');
     }
@@ -135,7 +126,8 @@ const updateSupSection = (mdText, newSups) => {
                 '\n');
         });
         return mdText;
-    } else {
+    }
+    else {
         // 直接追加
         // 先确定此节的层级：找第一个层级，然后加在最后
         let matches = mdText.match(/^(#+)(.*)/);
@@ -148,13 +140,13 @@ const updateSupSection = (mdText, newSups) => {
         }
         mdText =
             mdText +
-            '\n' +
-            Array(level)
-            .fill('#')
-            .join('') +
-            ' ' +
-            LINK_MD_SECTION +
-            '\n';
+                '\n' +
+                Array(level)
+                    .fill('#')
+                    .join('') +
+                ' ' +
+                LINK_MD_SECTION +
+                '\n';
         return (newSups.reduce((prev, curr) => {
             return prev + '\n' + '1.' + ' ' + curr.link + ' <!--' + curr.text + '-->';
         }, mdText) + '\n');
@@ -169,28 +161,30 @@ const changeLnks2Sups = (baseData) => {
     let sups = baseData.sups;
     let lnks = baseData.lnks;
     let newSups = [];
-    let i = 0,
-        j = 0,
-        idxS, idxL, nodeS, nodeL;
+    let i = 0, j = 0, idxS, idxL, nodeS, nodeL;
     let configLnks = (idxL, nodeL) => {
         mdText = inHereReplaceLnkString2Sup(mdText, idxL, nodeL, newSups);
-        newSups = newSups.concat([{
-            idx: newSups.length,
-            link: nodeL.link,
-            html: `<!--begin sup text-->${nodeL.text}<!--end sup text--><sup>${newSups.length + 1}</sup>`,
-            text: nodeL.text,
-            search: new RegExp(`(<!--begin sup text-->${nodeL.text}<!--end sup text-->){0,}<sup>(\\d+)?<\/sup>`),
-        }, ]);
+        newSups = newSups.concat([
+            {
+                idx: newSups.length,
+                link: nodeL.link,
+                html: `<!--begin sup text-->${nodeL.text}<!--end sup text--><sup>${newSups.length + 1}</sup>`,
+                text: nodeL.text,
+                search: new RegExp(`(<!--begin sup text-->${nodeL.text}<!--end sup text-->){0,}<sup>(\\d+)?<\/sup>`),
+            },
+        ]);
     };
     let configSups = (idxS, nodeS) => {
         mdText = inHereReplaceSupString2Sup(mdText, idxS, nodeS, newSups);
-        newSups = newSups.concat([{
-            idx: newSups.length,
-            link: nodeS.link,
-            html: `<!--begin sup text-->${nodeS.text}<!--end sup text--><sup>${newSups.length + 1}</sup>`,
-            text: nodeS.text,
-            search: new RegExp(`(<!--begin sup text-->${nodeL.text}<!--end sup text-->){0,}<sup>(\\d+)?<\/sup>`),
-        }, ]);
+        newSups = newSups.concat([
+            {
+                idx: newSups.length,
+                link: nodeS.link,
+                html: `<!--begin sup text-->${nodeS.text}<!--end sup text--><sup>${newSups.length + 1}</sup>`,
+                text: nodeS.text,
+                search: new RegExp(`(<!--begin sup text-->${nodeL.text}<!--end sup text-->){0,}<sup>(\\d+)?<\/sup>`),
+            },
+        ]);
     };
     while (i < sups.length || j < lnks.length) {
         nodeS = sups[i];
@@ -211,7 +205,8 @@ const changeLnks2Sups = (baseData) => {
             configSups(idxS, nodeS);
             i++;
             continue;
-        } else {
+        }
+        else {
             configLnks(idxL, nodeL);
             j++;
             continue;
@@ -224,26 +219,28 @@ const changeSups2Lnk = (baseData) => {
     let sups = baseData.sups;
     let lnks = baseData.lnks;
     let newLnks = [];
-    let i = 0,
-        j = 0,
-        idxS, idxL, nodeS, nodeL;
+    let i = 0, j = 0, idxS, idxL, nodeS, nodeL;
     let configLnks = (idxL, nodeL) => {
         mdText = inHereReplaceLnkString2Lnk(mdText, idxL, nodeL, newLnks);
-        newLnks = newLnks.concat([{
-            idx: newLnks.length,
-            link: nodeL.link,
-            markdown: `[${nodeL.text}](${nodeL.link})`,
-            text: nodeL.text,
-        }, ]);
+        newLnks = newLnks.concat([
+            {
+                idx: newLnks.length,
+                link: nodeL.link,
+                markdown: `[${nodeL.text}](${nodeL.link})`,
+                text: nodeL.text,
+            },
+        ]);
     };
     let configSups = (idxS, nodeS) => {
         mdText = inHereReplaceSupString2Lnk(mdText, idxS, nodeS, newLnks);
-        newLnks = newLnks.concat([{
-            idx: newLnks.length,
-            link: nodeS.link,
-            markdown: `[${nodeS.text}](${nodeS.link})`,
-            text: nodeS.text,
-        }, ]);
+        newLnks = newLnks.concat([
+            {
+                idx: newLnks.length,
+                link: nodeS.link,
+                markdown: `[${nodeS.text}](${nodeS.link})`,
+                text: nodeS.text,
+            },
+        ]);
     };
     while (i < sups.length || j < lnks.length) {
         nodeS = sups[i];
@@ -264,7 +261,8 @@ const changeSups2Lnk = (baseData) => {
             configSups(idxS, nodeS);
             i++;
             continue;
-        } else {
+        }
+        else {
             configLnks(idxL, nodeL);
             j++;
             continue;
@@ -328,20 +326,19 @@ function activate(context) {
     let disposableLnk2sup = vscode.commands.registerCommand('extension.lnk2sup', () => {
         // The code you place here will be executed every time your command is executed
         lnk2sup();
-        vscode.window.showInformationMessage(LNK2SUP_OK);
+        vscode.window.showInformationMessage(LNK_TO_SUP_OK);
     });
     let disposableSup2Lnk = vscode.commands.registerCommand('extension.sup2lnk', () => {
         // The code you place here will be executed every time your command is executed
         sup2lnk();
-        vscode.window.showInformationMessage(SUP2LNK_OK);
+        vscode.window.showInformationMessage(SUP_TO_LNK_OK);
     });
     context.subscriptions.push(disposableLnk2sup);
     context.subscriptions.push(disposableSup2Lnk);
     // Display a message box to the user
-    // vscode.window.showInformationMessage('Success!');
 }
 exports.activate = activate;
 // this method is called when your extension is deactivated
-function deactivate() {}
+function deactivate() { }
 exports.deactivate = deactivate;
 //# sourceMappingURL=extension.js.map
