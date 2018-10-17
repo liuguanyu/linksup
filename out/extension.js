@@ -8,7 +8,7 @@ function searchIdxFromMarkdownByLnks(lnk, md) {
     return md.indexOf(lnk.markdown);
 }
 function searchIdxFromMarkdownBySups(sup, md) {
-    return md.indexOf(sup.html);
+    return md.search(sup.search);
 }
 const getDoc = () => {
     let editor = vscode.window.activeTextEditor;
@@ -78,6 +78,7 @@ const getSupsFromMd = (md) => {
         return Object.assign(el, {
             idx: i,
             html: `<!--begin sup text-->${el.text}<!--end sup text--><sup>${i + 1}</sup>`,
+            search: new RegExp(`(<!--begin sup text-->${el.text}<!--end sup text-->){0,}<sup>(\\d+)?<\/sup>`),
         });
     });
 };
@@ -85,7 +86,7 @@ const getSupsFromMd = (md) => {
 const inHereReplaceSupString2Sup = (mdText, idxS, node, newSups) => {
     let prev = mdText.slice(0, idxS);
     let newSupText = `<!--begin sup text-->${node.text} <!--end sup text--><sup>${newSups.length + 1}</sup>`;
-    let tail = mdText.slice(idxS).slice(node.html.length);
+    let tail = mdText.slice(idxS).replace(node.search, '');
     return [prev, newSupText, tail].join('');
 };
 // 更新link在前文的markdown标签
@@ -99,7 +100,7 @@ const inHereReplaceLnkString2Sup = (mdText, idxL, node, newSups) => {
 const inHereReplaceSupString2Lnk = (mdText, idxS, node, newLnks) => {
     let prev = mdText.slice(0, idxS);
     let newLnkText = `[${node.text}](${node.link})`;
-    let tail = mdText.slice(idxS).slice(node.html.length);
+    let tail = mdText.slice(idxS).replace(node.search, '');
     return [prev, newLnkText, tail].join('');
 };
 // 更新lnk在前文的markdown
@@ -150,8 +151,8 @@ const updateSupSection = (mdText, newSups) => {
     }
 };
 const cleanSupSection = (mdText) => {
-    let regSup = new RegExp('#.*?' + LINK_MD_SECTION + '.*\\n+?((?:^|\\n)\\d+.\\s{0,}.*\\n)*?', 'm');
-    return mdText; //mdText.replace(regSup, '');
+    let regSup = new RegExp('#.*?' + LINK_MD_SECTION + '[\\s|.]{0,}((\\d+.[\\s|\\S]+?)\\n)*', 'm');
+    return mdText.replace(regSup, '');
 };
 const changeLnks2Sups = (baseData) => {
     let mdText = baseData.mdText;
@@ -165,8 +166,9 @@ const changeLnks2Sups = (baseData) => {
             {
                 idx: newSups.length,
                 link: nodeL.link,
-                html: `${nodeL.text} <sup>${newSups.length + 1}</sup>`,
+                html: `<!--begin sup text-->${nodeL.text}<!--end sup text--><sup>${newSups.length + 1}</sup>`,
                 text: nodeL.text,
+                search: new RegExp(`(<!--begin sup text-->${nodeL.text}<!--end sup text-->){0,}<sup>(\\d+)?<\/sup>`),
             },
         ]);
     };
@@ -176,8 +178,9 @@ const changeLnks2Sups = (baseData) => {
             {
                 idx: newSups.length,
                 link: nodeS.link,
-                html: `<sup>${newSups.length + 1}</sup>`,
+                html: `<!--begin sup text-->${nodeS.text}<!--end sup text--><sup>${newSups.length + 1}</sup>`,
                 text: nodeS.text,
+                search: new RegExp(`(<!--begin sup text-->${nodeL.text}<!--end sup text-->){0,}<sup>(\\d+)?<\/sup>`),
             },
         ]);
     };

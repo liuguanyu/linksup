@@ -209,7 +209,7 @@ const updateSupSection = (mdText: string, newSups: SUP[]): string => {
 const cleanSupSection = (mdText: string) => {
 	let regSup = new RegExp('#.*?' + LINK_MD_SECTION + '.*\\n+?((?:^|\\n)\\d+.\\s{0,}.*\\n)*?', 'm');
 
-	return mdText; //mdText.replace(regSup, '');
+	return mdText.replace(regSup, '');
 };
 
 const changeLnks2Sups = (baseData: BaseData): string => {

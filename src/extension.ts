@@ -6,17 +6,18 @@ import * as vscode from 'vscode';
 const LINK_MD_SECTION = '文内链接';
 
 interface LNK {
-	idx: Number;
+	idx: number;
 	text: string;
 	link: string;
 	markdown: string;
 }
 
 interface SUP {
-	idx: Number;
+	idx: number;
 	link: string;
 	html: string;
 	text: string;
+	search: RegExp;
 }
 
 interface BaseData {
@@ -30,7 +31,7 @@ function searchIdxFromMarkdownByLnks(lnk: LNK, md: string): number {
 }
 
 function searchIdxFromMarkdownBySups(sup: SUP, md: string): number {
-	return md.indexOf(sup.html);
+	return md.search(sup.search);
 }
 
 const getDoc = () => {
@@ -114,6 +115,7 @@ const getSupsFromMd = (md: string): SUP[] => {
 		return Object.assign(el, {
 			idx: i,
 			html: `<!--begin sup text-->${el.text}<!--end sup text--><sup>${i + 1}</sup>`,
+			search: new RegExp(`(<!--begin sup text-->${el.text}<!--end sup text-->){0,}<sup>(\\d+)?<\/sup>`),
 		});
 	});
 };
@@ -122,7 +124,7 @@ const getSupsFromMd = (md: string): SUP[] => {
 const inHereReplaceSupString2Sup = (mdText: string, idxS: number, node: SUP, newSups: SUP[]): string => {
 	let prev = mdText.slice(0, idxS);
 	let newSupText = `<!--begin sup text-->${node.text} <!--end sup text--><sup>${newSups.length + 1}</sup>`;
-	let tail = mdText.slice(idxS).slice(node.html.length);
+	let tail = mdText.slice(idxS).replace(node.search, '');
 
 	return [prev, newSupText, tail].join('');
 };
@@ -140,8 +142,7 @@ const inHereReplaceLnkString2Sup = (mdText: string, idxL: number, node: LNK, new
 const inHereReplaceSupString2Lnk = (mdText: string, idxS: number, node: SUP, newLnks: LNK[]): string => {
 	let prev = mdText.slice(0, idxS);
 	let newLnkText = `[${node.text}](${node.link})`;
-	let tail = mdText.slice(idxS).slice(node.html.length);
-
+	let tail = mdText.slice(idxS).replace(node.search, '');
 	return [prev, newLnkText, tail].join('');
 };
 
@@ -207,9 +208,9 @@ const updateSupSection = (mdText: string, newSups: SUP[]): string => {
 };
 
 const cleanSupSection = (mdText: string) => {
-	let regSup = new RegExp('#.*?' + LINK_MD_SECTION + '.*\\n+?((?:^|\\n)\\d+.\\s{0,}.*\\n)*?', 'm');
+	let regSup = new RegExp('#.*?' + LINK_MD_SECTION + '[\\s|.]{0,}((\\d+.[\\s|\\S]+?)\\n)*', 'm');
 
-	return mdText; //mdText.replace(regSup, '');
+	return mdText.replace(regSup, '');
 };
 
 const changeLnks2Sups = (baseData: BaseData): string => {
@@ -232,8 +233,9 @@ const changeLnks2Sups = (baseData: BaseData): string => {
 			{
 				idx: newSups.length,
 				link: nodeL.link,
-				html: `${nodeL.text} <sup>${newSups.length + 1}</sup>`,
+				html: `<!--begin sup text-->${nodeL.text}<!--end sup text--><sup>${newSups.length + 1}</sup>`,
 				text: nodeL.text,
+				search: new RegExp(`(<!--begin sup text-->${nodeL.text}<!--end sup text-->){0,}<sup>(\\d+)?<\/sup>`),
 			},
 		]);
 	};
@@ -244,8 +246,9 @@ const changeLnks2Sups = (baseData: BaseData): string => {
 			{
 				idx: newSups.length,
 				link: nodeS.link,
-				html: `<sup>${newSups.length + 1}</sup>`,
+				html: `<!--begin sup text-->${nodeS.text}<!--end sup text--><sup>${newSups.length + 1}</sup>`,
 				text: nodeS.text,
+				search: new RegExp(`(<!--begin sup text-->${nodeL.text}<!--end sup text-->){0,}<sup>(\\d+)?<\/sup>`),
 			},
 		]);
 	};
@@ -411,7 +414,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 	let disposableSup2Lnk = vscode.commands.registerCommand('extension.sup2lnk', () => {
 		// The code you place here will be executed every time your command is executed
-
 		sup2lnk();
 	});
 
