@@ -323,12 +323,12 @@ function activate(context) {
     // The command has been defined in the package.json file
     // Now provide the implementation of the command with  registerCommand
     // The commandId parameter must match the command field in package.json
-    let disposableLnk2sup = vscode.commands.registerCommand('extension.lnk2sup', () => {
+    let disposableLnk2sup = vscode.commands.registerCommand('extension.linksup.lnk2sup', () => {
         // The code you place here will be executed every time your command is executed
         lnk2sup();
         vscode.window.showInformationMessage(LNK_TO_SUP_OK);
     });
-    let disposableSup2Lnk = vscode.commands.registerCommand('extension.sup2lnk', () => {
+    let disposableSup2Lnk = vscode.commands.registerCommand('extension.linksup.sup2lnk', () => {
         // The code you place here will be executed every time your command is executed
         sup2lnk();
         vscode.window.showInformationMessage(SUP_TO_LNK_OK);

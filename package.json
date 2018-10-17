@@ -1,9 +1,9 @@
 {
-    "name": "Linksup",
-    "displayName": "Linksup",
-    "description": "Linksup",
+    "name": "linksup",
+    "displayName": "linksup",
+    "description": "linksup",
     "version": "0.0.1",
-    "publisher": "Linksup",
+    "publisher": "linksup",
     "engines": {
         "vscode": "^1.28.0"
     },
@@ -11,14 +11,13 @@
         "Other"
     ],
     "contributes": {
-        "commands": [
-            {
-                "command": "extension.lnk2sup",
+        "commands": [{
+                "command": "extension.linksup.lnk2sup",
                 "title": "链接转角标",
                 "category": "Transform"
             },
             {
-                "command": "extension.sup2lnk",
+                "command": "extension.linksup.sup2lnk",
                 "title": "角标转链接",
                 "category": "Transform"
             }
@@ -26,7 +25,8 @@
     },
     "main": "./out/extension",
     "activationEvents": [
-        "onLanguage:markdown"
+        "onLanguage:markdown",
+        "onCommand:extension.linksup"
     ],
     "scripts": {
         "vscode:prepublish": "npm run compile",
