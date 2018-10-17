@@ -4,6 +4,7 @@
     "description": "linksup",
     "version": "0.0.1",
     "publisher": "linksup",
+    "repository" : "https://github.com/liuguanyu/linksup.git", 
     "engines": {
         "vscode": "^1.28.0"
     },
