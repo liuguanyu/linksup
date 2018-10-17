@@ -357,6 +357,31 @@ const changeSups2Lnk = (baseData: BaseData): string => {
 	return cleanSupSection(mdText);
 };
 
+const replaceWholeText = (text: string) => {
+	let doc = getDoc();
+
+	if (doc === undefined) {
+		return;
+	}
+
+	let firstLine = doc.lineAt(0);
+	let lastLine = doc.lineAt(doc.lineCount - 1);
+	let textRange = new vscode.Range(
+		0,
+		firstLine.range.start.character,
+		doc.lineCount - 1,
+		lastLine.range.end.character
+	);
+
+	if (vscode.window.activeTextEditor === undefined) {
+		return;
+	}
+
+	vscode.window.activeTextEditor.edit(editBuilder => {
+		editBuilder.replace(textRange, text);
+	});
+};
+
 const getBaseData = (): BaseData | undefined => {
 	let doc = getDoc();
 
@@ -384,7 +409,7 @@ const lnk2sup = () => {
 
 	if (baseData !== undefined) {
 		let newText = changeLnks2Sups(baseData);
-		console.log(newText);
+		replaceWholeText(newText);
 	}
 };
 
@@ -393,7 +418,7 @@ const sup2lnk = () => {
 
 	if (baseData !== undefined) {
 		let newText = changeSups2Lnk(baseData);
-		console.log(newText);
+		replaceWholeText(newText);
 	}
 };
 

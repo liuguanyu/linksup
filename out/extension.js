@@ -268,6 +268,21 @@ const changeSups2Lnk = (baseData) => {
     }
     return cleanSupSection(mdText);
 };
+const replaceWholeText = (text) => {
+    let doc = getDoc();
+    if (doc === undefined) {
+        return;
+    }
+    let firstLine = doc.lineAt(0);
+    let lastLine = doc.lineAt(doc.lineCount - 1);
+    let textRange = new vscode.Range(0, firstLine.range.start.character, doc.lineCount - 1, lastLine.range.end.character);
+    if (vscode.window.activeTextEditor === undefined) {
+        return;
+    }
+    vscode.window.activeTextEditor.edit(editBuilder => {
+        editBuilder.replace(textRange, text);
+    });
+};
 const getBaseData = () => {
     let doc = getDoc();
     if (doc === undefined) {
@@ -288,14 +303,14 @@ const lnk2sup = () => {
     let baseData = getBaseData();
     if (baseData !== undefined) {
         let newText = changeLnks2Sups(baseData);
-        console.log(newText);
+        replaceWholeText(newText);
     }
 };
 const sup2lnk = () => {
     let baseData = getBaseData();
     if (baseData !== undefined) {
         let newText = changeSups2Lnk(baseData);
-        console.log(newText);
+        replaceWholeText(newText);
     }
 };
 // this method is called when your extension is activated
