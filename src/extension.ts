@@ -68,7 +68,7 @@ const getLnksFromMd = (md: string): LNK[] => {
 };
 
 const getSupsFromMd = (md: string): SUP[] => {
-	let reg = /(<!--begin sup text-->(.*)?<!--end sup text-->){0,1}<sup>(\d+)?<\/sup>/g;
+	let reg = /(<!--begin sup text-->(.*?)<!--end sup text-->){0,1}?<sup>(\d*)?<\/sup>/g;
 	let res;
 	let tags = [];
 	let rets: SUP[] = [];
@@ -97,13 +97,11 @@ const getSupsFromMd = (md: string): SUP[] => {
 		.trim()
 		.split('\n')
 		.map(el => {
-			let node = el
-				.trim()
-				.replace(/\d*?\.\s*/, '')
-				.split(/\s+?/);
+			let node = el.trim().replace(/\d*?\.\s+?/, '');
+			let m = node.split(/\s+?(?=<!\-)/);
 
-			if (node.length > 1) {
-				return { link: node[0], text: node[1].replace(/<!--\s*?(.*)?\s*?-->/, '$1').trim() };
+			if (m.length > 1) {
+				return { link: m[0], text: m[1].replace(/<!--\s*?(.*)?\s*?-->/, '$1').trim() };
 			}
 
 			return { link: node[0], text: node[0] };
